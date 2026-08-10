@@ -471,6 +471,39 @@ describe(getExpoConfigSourcesAsync, () => {
       expectFontSource(sources, 'assets/fonts/SpaceMono-Regular.ttf');
     });
 
+    it('includes a font file path declared at the top-level and in the font definition', async () => {
+      const sources = await getFontSources(
+        {
+          'assets/fonts/RobotoFlex.ttf': 'roboto flex data',
+          'assets/fonts/RobotoFlex-Italic.ttf': 'roboto flex italic data',
+        },
+        {
+          android: {
+            fonts: [
+              {
+                fontFamily: 'Roboto Flex',
+                path: './assets/fonts/RobotoFlex.ttf',
+                fontDefinitions: [
+                  { weight: 400 },
+                  { weight: 700, axes: { wght: 650 } },
+                  // A definition may still name a file of its own.
+                  {
+                    path: './assets/fonts/RobotoFlex-Italic.ttf',
+                    weight: 400,
+                    style: 'italic',
+                  },
+                ],
+              },
+            ],
+          },
+        },
+        'android'
+      );
+
+      expectFontSource(sources, 'assets/fonts/RobotoFlex.ttf');
+      expectFontSource(sources, 'assets/fonts/RobotoFlex-Italic.ttf');
+    });
+
     // When a directory path is passed to `fonts`, the config plugin resolves individual
     // font files from it (filtering by extension). The fingerprint, hashes the
     // entire directory — this over-hashes slightly but is safe
