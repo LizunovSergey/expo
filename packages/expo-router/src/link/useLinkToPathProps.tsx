@@ -1,3 +1,4 @@
+import { IS_DOM } from 'expo/dom';
 import type { MouseEvent } from 'react';
 import type { GestureResponderEvent } from 'react-native';
 import { Platform } from 'react-native';
@@ -39,6 +40,15 @@ type UseLinkToPathPropsOptions = LinkToOptions & {
 
 export default function useLinkToPathProps({ href, ...options }: UseLinkToPathPropsOptions) {
   const onPress = (event?: MouseEvent<HTMLAnchorElement> | GestureResponderEvent) => {
+    if (
+      Platform.OS === 'web' &&
+      !IS_DOM &&
+      shouldLinkExternally(href) &&
+      event?.currentTarget instanceof HTMLAnchorElement
+    ) {
+      return;
+    }
+
     if (shouldHandleMouseEvent(event)) {
       if (emitDomLinkEvent(href, options)) {
         return;

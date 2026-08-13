@@ -1,60 +1,31 @@
 import Color from 'color';
-import * as React from 'react';
 import { Platform, StyleSheet } from 'react-native';
 
-import { type LinkProps, useLinkProps, useTheme } from '../native';
+import { router } from '../../imperative-api';
+import type { Href } from '../../types';
+import { useTheme } from '../native';
 import { PlatformPressable, type Props as PlatformPressableProps } from './PlatformPressable';
 import { Text } from './Text';
 
-type ButtonBaseProps = Omit<PlatformPressableProps, 'children'> & {
+type ButtonProps = Omit<PlatformPressableProps, 'children' | 'href'> & {
+  href?: Href;
   variant?: 'plain' | 'tinted' | 'filled';
   color?: string;
   children: string | string[];
 };
 
-type ButtonLinkProps<ParamList extends ReactNavigation.RootParamList> = LinkProps<ParamList> &
-  Omit<ButtonBaseProps, 'onPress'>;
-
 const BUTTON_RADIUS = 40;
 
-export function Button<ParamList extends ReactNavigation.RootParamList>(
-  props: ButtonLinkProps<ParamList>
-): React.JSX.Element;
-
-export function Button(props: ButtonBaseProps): React.JSX.Element;
-
-export function Button<ParamList extends ReactNavigation.RootParamList>(
-  props: ButtonBaseProps | ButtonLinkProps<ParamList>
-) {
-  if ('screen' in props || 'action' in props) {
-    // @ts-expect-error: This is already type-checked by the prop types
-    return <ButtonLink {...props} />;
-  } else {
-    return <ButtonBase {...props} />;
-  }
-}
-
-function ButtonLink<ParamList extends ReactNavigation.RootParamList>({
-  screen,
-  params,
-  action,
+export function Button({
   href,
-  ...rest
-}: ButtonLinkProps<ParamList>) {
-  // @ts-expect-error: This is already type-checked by the prop types
-  const props = useLinkProps({ screen, params, action, href });
-
-  return <ButtonBase {...rest} {...props} />;
-}
-
-function ButtonBase({
+  onPress,
   variant = 'tinted',
   color: customColor,
   android_ripple,
   style,
   children,
   ...rest
-}: ButtonBaseProps) {
+}: ButtonProps) {
   const { colors, fonts } = useTheme();
 
   const color = customColor ?? colors.primary;
@@ -80,6 +51,12 @@ function ButtonBase({
   return (
     <PlatformPressable
       {...rest}
+      onPress={(event) => {
+        onPress?.(event);
+        if (href && !event?.defaultPrevented) {
+          router.navigate(href);
+        }
+      }}
       android_ripple={{
         radius: BUTTON_RADIUS,
         color: Color(textColor).fade(0.85).string(),

@@ -4,6 +4,7 @@
 
 ### 🛠 Breaking changes
 
+- Remove the deprecated `Link` and `useLinkProps` exports from `expo-router/react-navigation`. Use `Link` from `expo-router` with an `href` instead.
 - Stop copying ancestor route params into descendant routes during imperative navigation, matching cold-start deep-link behavior.
 - Change custom routers' `getStateForAction` return value to `{ state, affectedRouteKey }`.
 - Remove `getInitialState` from the `Router` interface. Custom routers no longer create initial state; the navigator creates it and passes it to `getRehydratedState`. ([#48783](https://github.com/expo/expo/pull/48783) by [@Ubax](https://github.com/Ubax))
