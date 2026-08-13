@@ -1,4 +1,5 @@
 import BackgroundTasks
+import UIKit
 import XCTest
 
 @testable import ExpoBackgroundTask
@@ -11,6 +12,12 @@ final class BackgroundTaskSchedulerTests: XCTestCase {
 
   func testTaskServiceHelperResolvesSharedTaskService() {
     XCTAssertNotNil(EXTaskServiceHelper.sharedTaskService())
+  }
+
+  func testBackgroundRefreshStatusMapping() {
+    XCTAssertEqual(BackgroundTaskScheduler.getStatus(for: .restricted), .restricted)
+    XCTAssertEqual(BackgroundTaskScheduler.getStatus(for: .available), .available)
+    XCTAssertEqual(BackgroundTaskScheduler.getStatus(for: .denied), .denied)
   }
 
   func testConcurrentScheduleWorkerCallsDoNotOverlapCancel() async throws {

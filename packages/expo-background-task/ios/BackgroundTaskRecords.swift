@@ -4,6 +4,7 @@ import ExpoModulesCore
 enum BackgroundTaskStatus: Int, Enumerable {
   case restricted = 1
   case available = 2
+  case denied = 3
 }
 
 enum BackgroundTaskResult: Int, Enumerable {

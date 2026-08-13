@@ -66,9 +66,8 @@ public class BackgroundTaskModule: Module {
     }
 
     AsyncFunction("getStatusAsync") {
-      return BackgroundTaskScheduler.supportsBackgroundTasks()
-        ? BackgroundTaskStatus.available : .restricted
-    }
+      return BackgroundTaskScheduler.getStatus()
+    }.runOnQueue(.main)
   }
 
   @objc func handleTasksExpiredNotification(_ notification: Notification) {

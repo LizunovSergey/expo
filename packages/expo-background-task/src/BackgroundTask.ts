@@ -27,8 +27,9 @@ function _validate(taskName: unknown) {
 
 // @needsAudit
 /**
- * Returns the status for the Background Task API. On web, it always returns `BackgroundTaskStatus.Restricted`,
- * while on native platforms it returns `BackgroundTaskStatus.Available`.
+ * Returns the status for the Background Task API. On web, it always returns `BackgroundTaskStatus.Restricted`.
+ * On Android, it returns `BackgroundTaskStatus.Available`. On iOS, it reflects the system's Background App
+ * Refresh setting.
  *
  * @returns A BackgroundTaskStatus enum value or `null` if not available.
  */

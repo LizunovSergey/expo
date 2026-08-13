@@ -1,6 +1,7 @@
 // Copyright 2024-present 650 Industries. All rights reserved.
 import BackgroundTasks
 import Foundation
+import UIKit
 
 protocol BackgroundTaskScheduling: Sendable {
   func cancel(taskRequestWithIdentifier identifier: String)
@@ -218,5 +219,29 @@ public class BackgroundTaskScheduler {
 #else
     return true
 #endif
+  }
+
+  /**
+   Returns the current Background App Refresh authorization status.
+   */
+  static func getStatus() -> BackgroundTaskStatus {
+#if targetEnvironment(simulator)
+    return .restricted
+#else
+    return getStatus(for: UIApplication.shared.backgroundRefreshStatus)
+#endif
+  }
+
+  static func getStatus(for backgroundRefreshStatus: UIBackgroundRefreshStatus) -> BackgroundTaskStatus {
+    switch backgroundRefreshStatus {
+    case .restricted:
+      return .restricted
+    case .available:
+      return .available
+    case .denied:
+      return .denied
+    @unknown default:
+      return .denied
+    }
   }
 }

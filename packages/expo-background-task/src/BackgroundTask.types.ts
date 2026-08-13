@@ -11,6 +11,11 @@ export enum BackgroundTaskStatus {
    * Background tasks are available for the app.
    */
   Available = 2,
+  /**
+   * The user disabled Background App Refresh for this app or for the whole system.
+   * @platform ios
+   */
+  Denied = 3,
 }
 
 // @needsAudit

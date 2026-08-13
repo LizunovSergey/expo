@@ -8,6 +8,8 @@
 
 ### 🐛 Bug fixes
 
+- [iOS] Return the current Background App Refresh authorization from `getStatusAsync()`.
+
 ### 💡 Others
 
 ## 57.0.7 - 2026-07-29
