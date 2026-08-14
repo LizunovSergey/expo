@@ -190,6 +190,47 @@ export type PrebuildStaleness = {
   changes: PrebuildSourceChange[];
 };
 
+export type NativeDirectoryStaleness = {
+  status: 'fresh' | 'stale' | 'unknown' | 'not-applicable';
+  changes: PrebuildSourceChange[];
+};
+
+/**
+ * Staleness of the generated native directory for a platform, read from the prebuild marker.
+ * `not-applicable` when the project has no native directory — nothing to regenerate. Shared by
+ * `npx expo needs-rebuild` and the dev server so their verdicts cannot diverge.
+ */
+export function getNativeDirectoryStaleness(
+  projectRoot: string,
+  platform: 'android' | 'ios',
+  current: { sources: FingerprintSource[]; fingerprintVersion: string | null }
+): NativeDirectoryStaleness {
+  if (!fs.existsSync(path.join(projectRoot, platform))) {
+    return { status: 'not-applicable', changes: [] };
+  }
+  // A bare project has a native directory but no marker, which reads as `unknown` and falls
+  // through to the plain rebuild advice.
+  return getPrebuildStaleness({
+    marker: readPrebuildFingerprintMarker(projectRoot, platform),
+    currentSources: current.sources,
+    currentFingerprintVersion: current.fingerprintVersion,
+  });
+}
+
+/**
+ * Commands that bring a stale installed app up to date, in order. When the generated native
+ * directories are stale, a plain rebuild would compile them as-is and embed the new hash —
+ * hiding the problem instead of fixing it — so `prebuild` has to run first.
+ */
+export function rebuildCommands(
+  platform: 'android' | 'ios',
+  { prebuildFirst }: { prebuildFirst: boolean }
+): string[] {
+  return prebuildFirst
+    ? [`npx expo prebuild -p ${platform}`, `npx expo run:${platform}`]
+    : [`npx expo run:${platform}`];
+}
+
 /**
  * Decide whether the generated native directories are stale relative to the current project,
  * and name the sources that made them stale — the answer to the question every stale verdict

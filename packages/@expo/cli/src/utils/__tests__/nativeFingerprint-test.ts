@@ -3,10 +3,12 @@ import { vol } from 'memfs';
 
 import {
   formatPrebuildChanges,
+  getNativeDirectoryStaleness,
   getPrebuildFingerprintMarkerPath,
   getPrebuildStaleness,
   importFingerprint,
   readPrebuildFingerprintMarker,
+  rebuildCommands,
   recordPrebuildFingerprintAsync,
 } from '../nativeFingerprint';
 
@@ -250,5 +252,52 @@ describe(importFingerprint, () => {
     } finally {
       jest.dontMock(target!);
     }
+  });
+});
+
+describe(getNativeDirectoryStaleness, () => {
+  const current = { sources: [configSource], fingerprintVersion: '0.20.6' };
+
+  it(`is not applicable without a native directory — nothing to regenerate`, () => {
+    expect(getNativeDirectoryStaleness(projectRoot, 'ios', current)).toEqual({
+      status: 'not-applicable',
+      changes: [],
+    });
+  });
+
+  it(`reads as unknown with a native directory but no marker (bare project)`, () => {
+    vol.fromJSON({ [`${projectRoot}/ios/Podfile`]: '' });
+    expect(getNativeDirectoryStaleness(projectRoot, 'ios', current)).toEqual({
+      status: 'unknown',
+      changes: [],
+    });
+  });
+
+  it(`compares against the marker when the native directory exists`, () => {
+    vol.fromJSON({
+      [`${projectRoot}/ios/Podfile`]: '',
+      [getPrebuildFingerprintMarkerPath(projectRoot, 'ios')]: JSON.stringify({
+        version: 1,
+        platform: 'ios',
+        hash: 'marker-hash',
+        sources: [{ ...configSource, hash: 'old-config-hash' }],
+        fingerprintVersion: '0.20.6',
+        createdAt: '2026-08-14T00:00:00.000Z',
+      }),
+    });
+    expect(getNativeDirectoryStaleness(projectRoot, 'ios', current)).toEqual({
+      status: 'stale',
+      changes: [{ source: 'app config', change: 'changed' }],
+    });
+  });
+});
+
+describe(rebuildCommands, () => {
+  it(`names prebuild first when the native directories are stale`, () => {
+    expect(rebuildCommands('ios', { prebuildFirst: true })).toEqual([
+      'npx expo prebuild -p ios',
+      'npx expo run:ios',
+    ]);
+    expect(rebuildCommands('android', { prebuildFirst: false })).toEqual(['npx expo run:android']);
   });
 });
