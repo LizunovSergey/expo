@@ -13,6 +13,7 @@ import { resolveHref } from '../link/href';
 import type { Href, RoutePath, RouteInputParams } from '../types';
 import { getHistoryLength } from '../utils/stack';
 import { shouldLinkExternally } from '../utils/url';
+import { getRegisteredRouterType } from './routerRegistry';
 import { routingQueue } from './routingQueue';
 import { store } from './store';
 import type { LinkToOptions, NavigationOptions } from './types';
@@ -96,9 +97,8 @@ export function canDismiss(): boolean {
 
   // Keep traversing down the state tree until we find a stack navigator that we can pop
   while (state) {
-    // TODO(ENG-22019): Detect typeless stacks, including anchor/initialRouteName states that start
-    // with multiple routes.
-    if (state.type === 'stack' && getHistoryLength(state) > 1) {
+    const routerType = state.type ?? getRegisteredRouterType(state.key);
+    if (routerType === 'stack' && getHistoryLength(state, routerType) > 1) {
       return true;
     }
     if (state.index === undefined) return false;

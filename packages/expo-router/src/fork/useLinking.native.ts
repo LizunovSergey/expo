@@ -2,17 +2,21 @@ import * as ExpoLinking from 'expo-linking';
 import { type RefObject, useEffect, useCallback, useRef } from 'react';
 import { Linking, Platform } from 'react-native';
 
+import { createSeededRootState } from '../global-state/createSeededNavigationState';
+import { getRouteInfoFromState } from '../global-state/getRouteInfoFromState';
+import { setCachedRouteInfo } from '../global-state/routeInfoCache';
 import { routingQueue } from '../global-state/routingQueue';
+import { storeRef } from '../global-state/store';
+import { useExpoRouterStore } from '../global-state/storeContext';
 import {
   type LinkingOptions,
   getStateFromPath as getStateFromPathDefault,
   type NavigationContainerRef,
+  type NavigationState,
   type ParamListBase,
   useNavigationIndependentTree,
 } from '../react-navigation/native';
 import { extractExpoPathFromURL } from './extractPathFromURL';
-
-type ResultState = ReturnType<typeof getStateFromPathDefault>;
 
 type Options = LinkingOptions<ParamListBase>;
 
@@ -51,6 +55,7 @@ export function useLinking(
   onUnhandledLinking: (lastUnhandledLining: string | undefined) => void
 ) {
   const independent = useNavigationIndependentTree();
+  const store = useExpoRouterStore();
 
   useEffect(() => {
     if (process.env.NODE_ENV === 'production') {
@@ -122,33 +127,47 @@ export function useLinking(
   );
 
   const getInitialState = useCallback(() => {
-    let state: ResultState | undefined;
+    let state: NavigationState | undefined;
 
     if (enabledRef.current) {
-      const url = getInitialURLRef.current();
+      if (store?.state?.stale === false) {
+        state = store.state;
+      }
 
-      if (url != null) {
-        if (typeof url !== 'string') {
+      if (state === undefined) {
+        const url = getInitialURLRef.current();
+
+        if (url != null && typeof url !== 'string') {
           return url.then((url) => {
-            const state = getStateFromURL(url);
+            const routeNode = store?.routeNode;
+            const state = routeNode
+              ? createSeededRootState(getStateFromURL(url), routeNode)
+              : undefined;
 
             if (typeof url === 'string') {
               // If the link were handled, it gets cleared in NavigationContainer
               onUnhandledLinking(extractExpoPathFromURL(prefixes, url));
             }
 
+            if (state) {
+              const routeInfo = getRouteInfoFromState(state);
+              storeRef.current.state = state;
+              storeRef.current.routeInfo = routeInfo;
+              setCachedRouteInfo(state, routeInfo);
+            }
             return state;
           });
-        } else {
+        } else if (typeof url === 'string') {
           onUnhandledLinking(extractExpoPathFromURL(prefixes, url));
         }
-      }
 
-      state = getStateFromURL(url);
+        const routeNode = store?.routeNode;
+        state = routeNode ? createSeededRootState(getStateFromURL(url), routeNode) : undefined;
+      }
     }
 
     const thenable = {
-      then(onfulfilled?: (state: ResultState | undefined) => void) {
+      then(onfulfilled?: (state: NavigationState | undefined) => void) {
         return Promise.resolve(onfulfilled ? onfulfilled(state) : state);
       },
       catch() {
@@ -156,7 +175,7 @@ export function useLinking(
       },
     };
 
-    return thenable as PromiseLike<ResultState | undefined>;
+    return thenable as PromiseLike<NavigationState | undefined>;
   }, [getStateFromURL, onUnhandledLinking, prefixes]);
 
   useEffect(() => {

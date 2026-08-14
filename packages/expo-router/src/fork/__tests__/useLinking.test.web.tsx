@@ -5,7 +5,7 @@ import { routingQueue } from '../../global-state/routingQueue';
 import { Screen } from '../../react-navigation/core/Screen';
 import { createNavigationContainerRef } from '../../react-navigation/core/createNavigationContainerRef';
 import { useNavigationBuilder } from '../../react-navigation/core/useNavigationBuilder';
-import { CommonActions, StackRouter } from '../../react-navigation/routers';
+import { CommonActions, StackRouter, type NavigationState } from '../../react-navigation/routers';
 import { NavigationContainer } from '../NavigationContainer';
 import { createMemoryHistory } from '../createMemoryHistory';
 import { useLinking } from '../useLinking';
@@ -13,10 +13,11 @@ import { useLinking } from '../useLinking';
 jest.mock('../createMemoryHistory');
 
 let mockNavigationRef: ReturnType<typeof createNavigationContainerRef>;
+let mockStoreState: NavigationState | undefined;
 jest.mock('../../global-state/storeContext', () => ({
   useExpoRouterStore: () => ({
     get state() {
-      return mockNavigationRef?.current?.getRootState();
+      return mockStoreState ?? mockNavigationRef?.current?.getRootState();
     },
   }),
 }));
@@ -41,6 +42,7 @@ function EmptyScreen() {
 }
 
 beforeEach(() => {
+  mockStoreState = undefined;
   routingQueue.queue = [];
   jest.mocked(createMemoryHistory).mockReturnValue(history);
   Object.defineProperty(globalThis, 'location', {
@@ -128,6 +130,32 @@ webTest('queues forward history and restores saved, parsed, and initial state', 
     payload: { action: { type: 'RESET', payload: initialState, target: 'root' } },
     metadata: { history: { id: 3, path: '/invalid' } },
   });
+});
+
+webTest('returns the existing store state by identity', async () => {
+  const existingState = {
+    stale: false as const,
+    key: 'root',
+    index: 0,
+    routeNames: ['home'],
+    routes: [{ key: 'home', name: 'home' }],
+  };
+  mockNavigationRef = createNavigationContainerRef();
+  mockStoreState = existingState;
+  let getInitialState: ReturnType<typeof useLinking>['getInitialState'] | undefined;
+
+  function Sample() {
+    getInitialState = useLinking(
+      mockNavigationRef,
+      { prefixes: [], getStateFromPath: jest.fn() },
+      jest.fn()
+    ).getInitialState;
+    return null;
+  }
+
+  render(<Sample />);
+
+  await expect(Promise.resolve(getInitialState?.())).resolves.toBe(existingState);
 });
 
 afterEach(() => {

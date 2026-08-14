@@ -2,7 +2,7 @@
 
 import Constants from 'expo-constants';
 import type { ComponentType } from 'react';
-import { Fragment, useEffect } from 'react';
+import { Fragment, useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
 
 import { extractExpoPathFromURL } from '../fork/extractPathFromURL';
@@ -11,10 +11,11 @@ import type { ExpoLinkingOptions, LinkingConfigOptions } from '../getLinkingConf
 import { getLinkingConfig } from '../getLinkingConfig';
 import { parseRouteSegments } from '../getReactNavigationConfig';
 import { getRoutes } from '../getRoutes';
-import { useNavigationContainerRef } from '../react-navigation/native';
+import { type NavigationState, useNavigationContainerRef } from '../react-navigation/native';
 import type { RequireContext } from '../types';
 import { getQualifiedRouteComponent } from '../useScreens';
 import { shouldLinkExternally } from '../utils/url';
+import { createSeededRootState } from './createSeededNavigationState';
 import { getRouteInfoFromState } from './getRouteInfoFromState';
 import { getCachedRouteInfo, setCachedRouteInfo } from './routeInfoCache';
 import {
@@ -23,7 +24,7 @@ import {
   getSplashScreenAnimationFrame,
   setSplashScreenAnimationFrame,
 } from './store';
-import type { ReactNavigationState, StoreRedirects } from './types';
+import type { StoreRedirects } from './types';
 
 export function useStore(
   context: RequireContext,
@@ -35,7 +36,8 @@ export function useStore(
 
   let linking: ExpoLinkingOptions | undefined;
   let rootComponent: ComponentType<any> = Fragment;
-  let initialState: ReactNavigationState | undefined;
+  let initialState: NavigationState | undefined;
+  const isFirstRender = useRef(true);
 
   const routeNode = getRoutes(context, {
     ...config,
@@ -72,15 +74,17 @@ export function useStore(
     // This will cause static rendering to fail, which once performs a single pass.
     // If the initialURL is a string, we can prefetch the state and routeInfo, skipping React Navigation's async behavior.
     const initialURL = linking?.getInitialURL?.();
-    if (typeof initialURL === 'string') {
+    if (isFirstRender.current && typeof initialURL === 'string') {
       let initialPath = extractExpoPathFromURL(linking.prefixes, initialURL);
 
       // It does not matter if the path starts with a `/` or not, but this keeps the behavior consistent
       if (!initialPath.startsWith('/')) initialPath = '/' + initialPath;
 
-      initialState = linking.getStateFromPath(initialPath, linking.config);
-      const initialRouteInfo = getRouteInfoFromState(initialState);
-      setCachedRouteInfo(initialState as any, initialRouteInfo);
+      initialState = createSeededRootState(
+        linking.getStateFromPath(initialPath, linking.config),
+        routeNode
+      );
+      setCachedRouteInfo(initialState, getRouteInfoFromState(initialState));
     }
   } else {
     // Only error in production, in development we will show the onboarding screen
@@ -92,6 +96,9 @@ export function useStore(
     rootComponent = Fragment;
   }
 
+  const state = isFirstRender.current ? initialState : storeRef.current.state;
+  isFirstRender.current = false;
+
   storeRef.current = {
     navigationRef,
     routeNode,
@@ -99,11 +106,11 @@ export function useStore(
     rootComponent,
     linking,
     redirects,
-    state: initialState,
+    state,
   };
 
-  if (initialState) {
-    storeRef.current.routeInfo = getCachedRouteInfo(initialState);
+  if (state) {
+    storeRef.current.routeInfo = getCachedRouteInfo(state);
   }
 
   useEffect(() => {

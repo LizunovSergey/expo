@@ -71,12 +71,10 @@ it('should go back to a previous route in the same stack', () => {
             },
           ],
           stale: false,
-          type: 'stack',
         },
       },
     ],
     stale: false,
-    type: 'stack',
   });
 
   act(() => router.dismissTo('/1/a'));
@@ -122,12 +120,10 @@ it('should go back to a previous route in the same stack', () => {
             },
           ],
           stale: false,
-          type: 'stack',
         },
       },
     ],
     stale: false,
-    type: 'stack',
   });
 });
 
@@ -233,12 +229,10 @@ it('should go back to a previous route in different stacks', () => {
             },
           ],
           stale: false,
-          type: 'stack',
         },
       },
     ],
     stale: false,
-    type: 'stack',
   });
 
   act(() => router.dismissTo('/1/a'));
@@ -284,12 +278,10 @@ it('should go back to a previous route in different stacks', () => {
             },
           ],
           stale: false,
-          type: 'stack',
         },
       },
     ],
     stale: false,
-    type: 'stack',
   });
 });
 
@@ -389,11 +381,9 @@ it('will replace the route if the provided href is not in the history', () => {
             },
           ],
           stale: false,
-          type: 'stack',
         },
       },
     ],
     stale: false,
-    type: 'stack',
   });
 });

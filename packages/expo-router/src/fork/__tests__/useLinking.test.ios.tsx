@@ -1,14 +1,42 @@
 import { expect, jest, test } from '@jest/globals';
 import { render, type RenderAPI } from '@testing-library/react-native';
 
+import type { RouteNode } from '../../Route';
 import { routingQueue } from '../../global-state/routingQueue';
+import { storeRef as mockStoreRef } from '../../global-state/store';
 import { createNavigationContainerRef, type ParamListBase } from '../../react-navigation/core';
 import { useLinking } from '../useLinking';
 
 let errorSpy: jest.SpiedFunction<typeof console.error> | undefined;
+let mockRouteNode: RouteNode;
+
+jest.mock('../../global-state/storeContext', () => ({
+  useExpoRouterStore: () => ({
+    get state() {
+      return mockStoreRef.current.state;
+    },
+    get routeNode() {
+      return mockRouteNode;
+    },
+  }),
+}));
+
+function node(route: string, children: RouteNode[] = []): RouteNode {
+  return {
+    type: 'route',
+    route,
+    children,
+    dynamic: null,
+    contextKey: route,
+    loadRoute: () => ({}),
+  };
+}
 
 beforeEach(() => {
   routingQueue.queue = [];
+  mockRouteNode = node('root', [node('home', [node('[id]')])]);
+  mockStoreRef.current.state = undefined;
+  mockStoreRef.current.routeInfo = undefined;
 });
 
 afterEach(() => {
@@ -53,6 +81,49 @@ test('queues an incoming deep link using its extracted app path', () => {
       },
     },
   ]);
+});
+
+test('stores and resolves the same completed state from an async initial URL', async () => {
+  const ref = createNavigationContainerRef<ParamListBase>();
+  let getInitialState: ReturnType<typeof useLinking>['getInitialState'] | undefined;
+
+  function Sample() {
+    getInitialState = useLinking(
+      ref,
+      {
+        prefixes: ['example://'],
+        getInitialURL: () => Promise.resolve('example://home/42'),
+        getStateFromPath: () => ({
+          routes: [
+            {
+              name: '__root',
+              state: {
+                routes: [
+                  {
+                    name: 'home',
+                    state: { routes: [{ name: '[id]', path: '/home/42', params: { id: '42' } }] },
+                  },
+                ],
+              },
+            },
+          ],
+        }),
+      },
+      () => {}
+    ).getInitialState;
+    return null;
+  }
+
+  render(<Sample />);
+  const state = await getInitialState?.();
+
+  expect(state).toBe(mockStoreRef.current.state);
+  expect(state?.routes[0]!.state?.routes[0]!.state).toMatchObject({
+    stale: false,
+    key: expect.any(String),
+    routeNames: ['[id]'],
+  });
+  expect(mockStoreRef.current.routeInfo?.pathname).toBe('/home/42');
 });
 
 test('throws if multiple instances of useLinking are used', () => {

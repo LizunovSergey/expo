@@ -1,12 +1,12 @@
 import type { ReactNavigationState } from '../global-state/types';
 import type { NavigationState } from '../react-navigation/native';
 
-export function getHistoryLength(state: ReactNavigationState): number {
+export function getHistoryLength(state: ReactNavigationState, type = state.type): number {
   if (state.history) {
     return state.history.length;
   }
 
-  if (state.type === 'stack') {
+  if (type === 'stack') {
     if (state.index === undefined) {
       return 1;
     }

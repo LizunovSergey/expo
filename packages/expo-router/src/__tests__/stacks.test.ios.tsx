@@ -9,6 +9,7 @@ import Tabs from '../layouts/Tabs';
 import type { StackScreenProps } from '../layouts/stack-utils';
 import { renderRouter, testRouter } from '../testing-library';
 import type { ScreenProps } from '../useScreens';
+import { expectCompleteStateToMatch } from './assertCompleteState';
 
 jest.mock('react-native-screens', () => {
   const actualScreens = jest.requireActual(
@@ -74,6 +75,27 @@ describe('canDismiss', () => {
 
     expect(router.canDismiss()).toBe(false);
     act(() => router.push('/b'));
+    expect(router.canDismiss()).toBe(false);
+  });
+
+  it('does not treat an anchored tab state as a stack', () => {
+    renderRouter(
+      {
+        _layout: {
+          unstable_settings: { initialRouteName: 'a' },
+          default: () => (
+            <Tabs>
+              <Tabs.Screen name="a" />
+              <Tabs.Screen name="b" />
+            </Tabs>
+          ),
+        },
+        a: () => null,
+        b: () => null,
+      },
+      { initialUrl: '/b' }
+    );
+
     expect(router.canDismiss()).toBe(false);
   });
 });
@@ -266,12 +288,10 @@ test('dismissAll nested', () => {
             },
           ],
           stale: false,
-          type: 'tab',
         },
       },
     ],
     stale: false,
-    type: 'stack',
   });
 
   // This should only dismissing the sub-state for /one/two/_layout
@@ -365,12 +385,10 @@ test('dismissAll nested', () => {
             },
           ],
           stale: false,
-          type: 'tab',
         },
       },
     ],
     stale: false,
-    type: 'stack',
   });
 
   // This should only dismissing the sub-state for /one/_layout
@@ -431,12 +449,10 @@ test('dismissAll nested', () => {
             },
           ],
           stale: false,
-          type: 'tab',
         },
       },
     ],
     stale: false,
-    type: 'stack',
   });
 
   // Cannot dismiss again as we are at the root Tabs layout
@@ -559,7 +575,7 @@ describe('singular', () => {
       }
     );
 
-    expect(screen).toHaveRouterState({
+    expectCompleteStateToMatch(store.state, {
       routes: [
         {
           name: '__root',
@@ -610,12 +626,10 @@ describe('singular', () => {
               },
             ],
             stale: false,
-            type: 'stack',
           },
         },
       ],
       stale: false,
-      type: 'stack',
     });
 
     // Adding a new screen with different params should work
@@ -654,12 +668,10 @@ describe('singular', () => {
               },
             ],
             stale: false,
-            type: 'stack',
           },
         },
       ],
       stale: false,
-      type: 'stack',
     });
 
     // Normally pushing would add a new route, but since we have singular set to true
@@ -699,12 +711,10 @@ describe('singular', () => {
               },
             ],
             stale: false,
-            type: 'stack',
           },
         },
       ],
       stale: false,
-      type: 'stack',
     });
   });
 });

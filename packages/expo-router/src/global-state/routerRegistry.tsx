@@ -20,6 +20,11 @@ export type RouterRegistryEntry = {
 
 // Entries appear after the first commit and state keys can change when navigation state is reset.
 export type RouterRegistry = ReadonlyMap<string, RouterRegistryEntry>;
+const registeredRouters = new Map<string, RouterRegistryEntry>();
+
+export function getRegisteredRouterType(stateKey: string | undefined): string | undefined {
+  return stateKey ? registeredRouters.get(stateKey)?.routerType : undefined;
+}
 
 type RouterRegistrySetters = {
   register: (stateKey: string, entry: RouterRegistryEntry) => void;
@@ -35,6 +40,7 @@ export function RouterRegistryProvider({ children }: PropsWithChildren) {
   const setters = useMemo<RouterRegistrySetters>(
     () => ({
       register(stateKey, entry) {
+        registeredRouters.set(stateKey, entry);
         setRegistry((previous) => {
           if (previous.get(stateKey) === entry) {
             return previous;
@@ -44,6 +50,9 @@ export function RouterRegistryProvider({ children }: PropsWithChildren) {
         });
       },
       unregister(stateKey, entry) {
+        if (registeredRouters.get(stateKey) === entry) {
+          registeredRouters.delete(stateKey);
+        }
         setRegistry((previous) => {
           if (previous.get(stateKey) !== entry) {
             return previous;

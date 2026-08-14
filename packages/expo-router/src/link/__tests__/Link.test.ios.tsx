@@ -390,12 +390,10 @@ describe('singular', () => {
               },
             ],
             stale: false,
-            type: 'stack',
           },
         },
       ],
       stale: false,
-      type: 'stack',
     });
 
     // Should push /apple and remove all previous instances of /apple
@@ -435,12 +433,10 @@ describe('singular', () => {
               },
             ],
             stale: false,
-            type: 'stack',
           },
         },
       ],
       stale: false,
-      type: 'stack',
     });
   });
 });
@@ -528,12 +524,10 @@ test('can dynamically route using singular function', () => {
             },
           ],
           stale: false,
-          type: 'stack',
         },
       },
     ],
     stale: false,
-    type: 'stack',
   });
 
   // Should push /apple and remove all previous instances of /apple
@@ -591,12 +585,10 @@ test('can dynamically route using singular function', () => {
             },
           ],
           stale: false,
-          type: 'stack',
         },
       },
     ],
     stale: false,
-    type: 'stack',
   });
 });
 
@@ -617,7 +609,6 @@ describe('prefetch', () => {
         {
           key: expect.any(String),
           name: '__root',
-          params: undefined,
           state: {
             index: 0,
             key: expect.any(String),
@@ -626,7 +617,6 @@ describe('prefetch', () => {
               {
                 key: expect.any(String),
                 name: 'index',
-                params: undefined,
                 path: '/',
               },
               {
@@ -641,7 +631,6 @@ describe('prefetch', () => {
         },
       ],
       stale: false,
-      type: 'stack',
     });
   });
 
@@ -666,9 +655,10 @@ describe('prefetch', () => {
     // Guarded routes stay registered in the navigator, so the prefetch preloads
     // the route like any other. Its content still renders nothing while guarded.
     const innerState = result.getRouterState()?.routes[0]?.state;
-    if (innerState?.type !== 'stack') {
+    if (!innerState) {
       throw new Error('Expected a stack navigator');
     }
+    // The complete initial state stays typeless until this navigator dispatches an action.
     expect((innerState as StackNavigationState<ParamListBase>).routes).toEqual([
       {
         key: expect.stringMatching(/^index-/),
