@@ -5,12 +5,12 @@
 ### 🛠 Breaking changes
 
 - [iOS] Remove the stale top-level `scope` and `accuracy` properties from the permission response returned by `getForegroundPermissionsAsync` and `requestForegroundPermissionsAsync`. Use the values under `ios` instead. ([#48009](https://github.com/expo/expo/pull/48009) by [@Wenszel](https://github.com/Wenszel))
-- [iOS] Did the same for `getBackgroundPermissionsAsync` and `requestBackgroundPermissionsAsync`, which were missed: `scope` and `accuracy` now live under `ios` there too, and both are typed as `LocationPermissionResponse`. ([#PR](https://github.com/expo/expo/pull/PR) by [@vonovak](https://github.com/vonovak))
 
 ### 🎉 New features
 
 ### 🐛 Bug fixes
 
+- [iOS] Add `scope` and `accuracy` under `ios` to the responses from `getBackgroundPermissionsAsync` and `requestBackgroundPermissionsAsync`, matching the `LocationPermissionResponse` type.
 - [Android] Fix `timeInterval` and `distanceInterval` being ignored for background location updates. ([#46788](https://github.com/expo/expo/issues/46788) by [@doshisunny](https://github.com/doshisunny))
 - [iOS] Fix incorrect default value for `pausesUpdatesAutomatically` to match docs. ([#47008](https://github.com/expo/expo/pull/47008) by [@Ignigena](https://github.com/Ignigena))
 - [Android] Fix leaking watches ([#48294](https://github.com/expo/expo/pull/48294) by [@Wenszel](https://github.com/Wenszel))

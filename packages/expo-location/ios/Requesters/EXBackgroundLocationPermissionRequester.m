@@ -159,6 +159,10 @@ static SEL alwaysAuthorizationSelector;
               @"scope": scope,
               @"accuracy": accuracy
             },
+            // Keep these long-standing fields during the migration to the platform-specific response shape.
+            // TODO: Remove the top-level `scope` and `accuracy` fields after SDK 59.
+            @"scope": scope,
+            @"accuracy": accuracy
          };
 }
 

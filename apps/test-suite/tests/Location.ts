@@ -6,9 +6,11 @@ import { Platform } from 'react-native';
 import * as TestUtils from '../TestUtils';
 import type { JasmineInterface } from '../types';
 import { requireNotNull } from '../utils/requireNotNull';
+import { waitFor } from './helpers';
 
 const BACKGROUND_LOCATION_TASK = 'background-location-updates';
 const GEOFENCING_TASK = 'geofencing-task';
+const GEOCODING_TIMEOUT = 10000; // Allow time for network requests.
 
 export const name = 'Location';
 
@@ -63,6 +65,19 @@ export async function test(t: JasmineInterface) {
     t.expect(typeof timestamp === 'number').toBe(true);
   }
 
+  // Android images without Google APIs ship no Geocoder, and both geocoding APIs
+  // then reject with ERR_NO_GEOCODE. Probe once so only those specs are skipped —
+  // any other failure still surfaces.
+  const hasGeocoder = await Promise.race([
+    Location.geocodeAsync('900 State St, Salem, OR').then(
+      () => true,
+      (error: any) => error?.code !== 'ERR_NO_GEOCODE'
+    ),
+    // Bounded: this runs before jasmine starts, so a hang would stall the run.
+    waitFor(5000).then(() => true),
+  ]);
+  const describeWithGeocoder = hasGeocoder ? t.describe : t.xdescribe;
+
   t.describe('Location', () => {
     // On Android, foreground permission needs to be asked before the background permissions
     describeWithPermissions('Location.requestForegroundPermissionsAsync()', () => {
@@ -71,7 +86,9 @@ export async function test(t: JasmineInterface) {
         t.expect(permission.granted).toBe(true);
         t.expect(permission.status).toBe(Location.PermissionStatus.GRANTED);
         if (Platform.OS === 'ios') {
-          t.expect(permission.ios?.scope).toBe('whenInUse');
+          // `always` also grants foreground access, and the two scopes cannot both
+          // be held: once the background specs below grant `always`, this reports it.
+          t.expect(['whenInUse', 'always']).toContain(permission.ios?.scope);
         }
       });
     });
@@ -82,7 +99,9 @@ export async function test(t: JasmineInterface) {
         t.expect(permission.granted).toBe(true);
         t.expect(permission.status).toBe(Location.PermissionStatus.GRANTED);
         if (Platform.OS === 'ios') {
-          t.expect(permission.ios?.scope).toBe('whenInUse');
+          // `always` also grants foreground access, and the two scopes cannot both
+          // be held: once the background specs below grant `always`, this reports it.
+          t.expect(['whenInUse', 'always']).toContain(permission.ios?.scope);
         }
       });
     });
@@ -93,8 +112,7 @@ export async function test(t: JasmineInterface) {
         t.expect(permission.granted).toBe(true);
         t.expect(permission.status).toBe(Location.PermissionStatus.GRANTED);
         if (Platform.OS === 'ios') {
-          // Typed as a plain `PermissionResponse`, but carries `ios.scope`.
-          t.expect((permission as Location.LocationPermissionResponse).ios?.scope).toBe('always');
+          t.expect(permission.ios?.scope).toBe('always');
         }
       });
     });
@@ -105,8 +123,7 @@ export async function test(t: JasmineInterface) {
         t.expect(permission.granted).toBe(true);
         t.expect(permission.status).toBe(Location.PermissionStatus.GRANTED);
         if (Platform.OS === 'ios') {
-          // Typed as a plain `PermissionResponse`, but carries `ios.scope`.
-          t.expect((permission as Location.LocationPermissionResponse).ios?.scope).toBe('always');
+          t.expect(permission.ios?.scope).toBe('always');
         }
       });
     });
@@ -172,7 +189,7 @@ export async function test(t: JasmineInterface) {
             }
           } catch (error: any) {
             // User has denied the dialog.
-            t.expect(error.code).toBe('E_LOCATION_SETTINGS_UNSATISFIED');
+            t.expect(error.code).toBe('ERR_LOCATION_SETTINGS_UNSATISFIED');
           }
         },
         20000
@@ -418,9 +435,7 @@ export async function test(t: JasmineInterface) {
         );
       });
 
-      t.describe('Location.geocodeAsync()', () => {
-        const timeout = 2000;
-
+      describeWithGeocoder('Location.geocodeAsync()', () => {
         t.it(
           'geocodes a place of the right shape',
           async () => {
@@ -433,7 +448,7 @@ export async function test(t: JasmineInterface) {
             t.expect(typeof accuracy).toBe('number');
             t.expect(typeof altitude).toBe('number');
           },
-          timeout
+          GEOCODING_TIMEOUT
         );
 
         t.it(
@@ -442,13 +457,11 @@ export async function test(t: JasmineInterface) {
             const result = await Location.geocodeAsync(':(');
             t.expect(result).toEqual([]);
           },
-          timeout
+          GEOCODING_TIMEOUT
         );
       });
 
-      t.describe('Location.reverseGeocodeAsync()', () => {
-        const timeout = 2000;
-
+      describeWithGeocoder('Location.reverseGeocodeAsync()', () => {
         t.it(
           'gives a right shape address of a point location',
           async () => {
@@ -465,7 +478,7 @@ export async function test(t: JasmineInterface) {
               t.expect(typeof value === 'string' || value == null).toBe(true);
             });
           },
-          timeout
+          GEOCODING_TIMEOUT
         );
 
         t.it("throws for a location where `latitude` and `longitude` aren't numbers", async () => {
@@ -606,7 +619,7 @@ export async function test(t: JasmineInterface) {
           await (async () => {
             let error;
             try {
-              // @ts-expect-error
+              // @ts-expect-error string is not a number
               await Location.startGeofencingAsync(GEOFENCING_TASK, [{ longitude: 'not a number' }]);
             } catch (e) {
               error = e;
